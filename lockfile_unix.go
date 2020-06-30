@@ -3,6 +3,7 @@
 package lockfile
 
 import (
+	"errors"
 	"os"
 	"syscall"
 )
@@ -14,7 +15,12 @@ func isRunning(pid int) (bool, error) {
 	}
 
 	if err := proc.Signal(syscall.Signal(0)); err != nil {
-		return false, nil
+		// syscall.EPERM will be returned if the process exists, but we don't
+		// have permissions to send signals to it. All other errors will mean
+		// that the process doesn't exist.
+		if !errors.Is(err, syscall.EPERM) {
+			return false, nil
+		}
 	}
 
 	return true, nil
